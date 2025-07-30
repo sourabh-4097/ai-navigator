@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -12,40 +12,54 @@ import {
   Clock, 
   ArrowRight,
   Grid3X3,
-  List
+  List,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockTools, mockCategories } from '../data/mock';
+import { toolsAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const ToolDirectory = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [tools, setTools] = useState([]);
+  const [categories, setCategories] = useState(['All Tools']);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Tools');
   const [sortBy, setSortBy] = useState('rating');
   const [viewMode, setViewMode] = useState('grid');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredTools = mockTools
-    .filter(tool => 
-      tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      tool.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .filter(tool => 
-      selectedCategory === 'All Tools' || tool.category === selectedCategory
-    )
-    .sort((a, b) => {
-      switch(sortBy) {
-        case 'rating': return b.rating - a.rating;
-        case 'name': return a.name.localeCompare(b.name);
-        case 'difficulty': 
-          const difficultyOrder = { 'Beginner': 1, 'Intermediate': 2, 'Advanced': 3 };
-          return difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty];
-        default: return 0;
-      }
-    });
+  useEffect(() => {
+    loadTools();
+  }, [selectedCategory, sortBy, searchTerm]);
+
+  const loadTools = async () => {
+    try {
+      setIsLoading(true);
+      const filters = {
+        category: selectedCategory !== 'All Tools' ? selectedCategory : undefined,
+        search: searchTerm || undefined,
+        sort_by: sortBy
+      };
+      
+      const data = await toolsAPI.getTools(filters);
+      setTools(data.tools);
+      setCategories(data.categories);
+    } catch (error) {
+      console.error('Error loading tools:', error);
+      toast({
+        title: "Error loading tools",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const ToolCard = ({ tool }) => (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/tool/${tool.id}`)}>
+    <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/tool/${tool._id}`)}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -69,7 +83,7 @@ const ToolDirectory = () => {
         <div className="flex items-center justify-between text-sm text-slate-500 mb-4">
           <div className="flex items-center">
             <Clock className="h-4 w-4 mr-1" />
-            {tool.timeToLearn}
+            {tool.time_to_learn}
           </div>
           <div className="flex items-center">
             <Star className="h-4 w-4 mr-1 text-yellow-500" />
@@ -89,7 +103,7 @@ const ToolDirectory = () => {
   );
 
   const ToolListItem = ({ tool }) => (
-    <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => navigate(`/tool/${tool.id}`)}>
+    <Card className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => navigate(`/tool/${tool._id}`)}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -106,7 +120,7 @@ const ToolDirectory = () => {
               <span>{tool.category}</span>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-1" />
-                {tool.timeToLearn}
+                {tool.time_to_learn}
               </div>
               <span>{tool.pricing}</span>
             </div>
@@ -145,7 +159,7 @@ const ToolDirectory = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">AI Tool Directory</h1>
           <p className="text-slate-600">
-            Discover and explore {mockTools.length} carefully curated AI tools to boost your productivity
+            Discover and explore {tools.length} carefully curated AI tools to boost your productivity
           </p>
         </div>
 
@@ -168,7 +182,7 @@ const ToolDirectory = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockCategories.map((category) => (
+                  {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
                     </SelectItem>
@@ -208,7 +222,7 @@ const ToolDirectory = () => {
           
           <div className="mt-4 flex items-center justify-between">
             <span className="text-sm text-slate-600">
-              {filteredTools.length} tools found
+              {isLoading ? 'Loading...' : `${tools.length} tools found`}
             </span>
             {searchTerm && (
               <Button 
@@ -222,22 +236,34 @@ const ToolDirectory = () => {
           </div>
         </div>
 
-        {/* Tools Grid/List */}
-        {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTools.map((tool) => (
-              <ToolCard key={tool.id} tool={tool} />
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredTools.map((tool) => (
-              <ToolListItem key={tool.id} tool={tool} />
-            ))}
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         )}
 
-        {filteredTools.length === 0 && (
+        {/* Tools Grid/List */}
+        {!isLoading && tools.length > 0 && (
+          <>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {tools.map((tool) => (
+                  <ToolCard key={tool._id} tool={tool} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tools.map((tool) => (
+                  <ToolListItem key={tool._id} tool={tool} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* No Results */}
+        {!isLoading && tools.length === 0 && (
           <div className="text-center py-12">
             <Filter className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-900 mb-2">No tools found</h3>
