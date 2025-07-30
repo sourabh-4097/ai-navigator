@@ -52,6 +52,37 @@ const PlanDetail = () => {
     }
   };
   
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        {/* Header */}
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-8 w-8 text-slate-900" />
+              <span className="text-xl font-bold text-slate-900">AI Navigator</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" onClick={() => navigate('/learning-plans')}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Plans
+              </Button>
+            </div>
+          </div>
+        </header>
+        
+        <div className="container mx-auto px-6 py-8 flex items-center justify-center">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p>Loading learning plan...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+  
   if (!plan) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
