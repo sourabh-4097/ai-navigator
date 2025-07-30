@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -13,10 +13,13 @@ import {
   PlayCircle,
   BookOpen,
   Award,
-  Calendar
+  Calendar,
+  Loader2
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { mockLearningPlans } from '../data/mock';
+import { plansAPI } from '../services/api';
+import { useUser } from '../hooks/useUser';
+import { useToast } from '../hooks/use-toast';
 
 const PlanDetail = () => {
   const navigate = useNavigate();
