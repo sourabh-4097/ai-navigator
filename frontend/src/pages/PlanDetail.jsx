@@ -24,9 +24,33 @@ import { useToast } from '../hooks/use-toast';
 const PlanDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { getUserEmail } = useUser();
+  const { toast } = useToast();
   const [selectedWeek, setSelectedWeek] = useState(0);
+  const [plan, setPlan] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const plan = mockLearningPlans.find(p => p.id === parseInt(id));
+  useEffect(() => {
+    loadPlan();
+  }, [id]);
+
+  const loadPlan = async () => {
+    try {
+      setIsLoading(true);
+      const userEmail = getUserEmail();
+      const data = await plansAPI.getPlan(id, userEmail);
+      setPlan(data);
+    } catch (error) {
+      console.error('Error loading learning plan:', error);
+      toast({
+        title: "Error loading learning plan",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   if (!plan) {
     return (
