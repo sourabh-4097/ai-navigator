@@ -3,6 +3,13 @@ from typing import List, Dict, Any, Optional
 from bson import ObjectId
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment variables
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
 from models import (
     Tool, LearningPlan, User, UserProgress, AssessmentQuestion,
     AchievementBadge, UserWeekProgress, PlanWeek
