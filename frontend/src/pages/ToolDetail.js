@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { toolService } from "../services/api";
+import { toolService, learningPlanService } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../hooks/use-toast";
+import Navigation from "../components/Navigation";
 
 const ToolDetail = () => {
   const { id } = useParams();
   const [tool, setTool] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [addingToPlan, setAddingToPlan] = useState(false);
+  const [availablePlans, setAvailablePlans] = useState([]);
+  const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,6 +34,63 @@ const ToolDetail = () => {
 
     fetchTool();
   }, [id, toast]);
+
+  useEffect(() => {
+    const fetchAvailablePlans = async () => {
+      if (isAuthenticated()) {
+        try {
+          const plans = await learningPlanService.getAllPlans();
+          setAvailablePlans(plans);
+        } catch (error) {
+          console.error("Error fetching learning plans:", error);
+        }
+      }
+    };
+
+    fetchAvailablePlans();
+  }, [isAuthenticated]);
+
+  const handleAddToPlan = async () => {
+    if (!isAuthenticated()) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to add tools to your learning plan.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // For now, let's find a plan that includes this tool or create a custom plan
+    const relevantPlan = availablePlans.find(plan => 
+      plan.tools && plan.tools.includes(tool.name)
+    );
+
+    if (relevantPlan) {
+      try {
+        setAddingToPlan(true);
+        await learningPlanService.startPlan(relevantPlan.id);
+        toast({
+          title: "Added to Learning Plan",
+          description: `${tool.name} has been added to your "${relevantPlan.title}" learning plan.`,
+        });
+      } catch (error) {
+        console.error("Error adding to plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add tool to learning plan. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setAddingToPlan(false);
+      }
+    } else {
+      toast({
+        title: "No Matching Plan",
+        description: "No existing learning plan found for this tool. Check out our learning plans to find one that includes this tool.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -54,10 +116,12 @@ const ToolDetail = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Link to="/tools" className="text-blue-600 hover:underline mb-6 inline-block">
-        &larr; Back to Tool Directory
-      </Link>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8">
+        <Link to="/tools" className="text-blue-600 hover:underline mb-6 inline-block">
+          &larr; Back to Tool Directory
+        </Link>
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -134,10 +198,15 @@ const ToolDetail = () => {
         </div>
         
         <div className="flex justify-center mt-8">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors">
-            Add to My Learning Plan
+          <button 
+            onClick={handleAddToPlan}
+            disabled={addingToPlan}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+          >
+            {addingToPlan ? "Adding..." : "Add to My Learning Plan"}
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

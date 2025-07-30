@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { learningPlanService, toolService, userService } from "../services/api";
 import { useToast } from "../hooks/use-toast";
+import Navigation from "../components/Navigation";
 
 const Dashboard = () => {
   const [userPlans, setUserPlans] = useState([]);
@@ -71,8 +72,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Welcome, {user?.name || "User"}!</h1>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">Welcome, {user?.name || "User"}!</h1>
       
       {/* User stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -245,6 +248,7 @@ const Dashboard = () => {
             <p className="text-gray-600">Contact our support team</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

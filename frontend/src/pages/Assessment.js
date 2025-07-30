@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { assessmentService } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../hooks/use-toast";
+import Navigation from "../components/Navigation";
 
 const Assessment = () => {
   const [questions, setQuestions] = useState([]);
@@ -85,7 +86,14 @@ const Assessment = () => {
 
     try {
       setSubmitting(true);
-      await assessmentService.submitAssessment(answers);
+      
+      // Convert answers to the format expected by the backend
+      const formattedAnswers = Object.entries(answers).map(([questionId, selectedOptions]) => ({
+        question_id: questionId,
+        answer: selectedOptions.length === 1 ? selectedOptions[0] : selectedOptions
+      }));
+      
+      await assessmentService.submitAssessment(formattedAnswers);
       
       // Get updated user profile with assessment results
       await updateProfile();
@@ -131,12 +139,19 @@ const Assessment = () => {
   const currentQuestionData = questions[currentQuestion];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">AI Tool Learning Assessment</h1>
-        <p className="text-gray-600 mb-8">
-          Answer these questions to help us personalize your AI tool learning journey.
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="mb-6">
+            <Link to="/dashboard" className="text-blue-600 hover:text-blue-800 text-sm">
+              ← Back to Dashboard
+            </Link>
+          </div>
+          <h1 className="text-3xl font-bold mb-6">AI Tool Learning Assessment</h1>
+          <p className="text-gray-600 mb-8">
+            Answer these questions to help us personalize your AI tool learning journey.
+          </p>
         
         {/* Progress bar */}
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
@@ -259,6 +274,7 @@ const Assessment = () => {
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };

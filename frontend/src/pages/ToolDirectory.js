@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toolService } from "../services/api";
 import { useToast } from "../hooks/use-toast";
+import Navigation from "../components/Navigation";
 
 const ToolDirectory = () => {
   const [tools, setTools] = useState([]);
@@ -45,8 +46,10 @@ const ToolDirectory = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">AI Tool Directory</h1>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-6">AI Tool Directory</h1>
       
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-8">
@@ -133,6 +136,7 @@ const ToolDirectory = () => {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 };
