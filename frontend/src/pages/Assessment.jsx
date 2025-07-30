@@ -1,24 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { Checkbox } from '../components/ui/checkbox';
 import { Label } from '../components/ui/label';
 import { Progress } from '../components/ui/progress';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockAssessmentQuestions } from '../data/mock';
 import { useToast } from '../hooks/use-toast';
+import { assessmentAPI } from '../services/api';
+import { useUser } from '../hooks/useUser';
 
 const Assessment = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { getUserEmail, setUser } = useUser();
+  const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isComplete, setIsComplete] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const questions = mockAssessmentQuestions;
-  const progress = ((currentQuestion + 1) / questions.length) * 100;
+  useEffect(() => {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    try {
+      setIsLoading(true);
+      const data = await assessmentAPI.getQuestions();
+      setQuestions(data);
+    } catch (error) {
+      console.error('Error loading questions:', error);
+      toast({
+        title: "Error loading questions",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0;
 
   const handleAnswer = (questionId, answer) => {
     setAnswers(prev => ({
@@ -29,7 +54,7 @@ const Assessment = () => {
 
   const handleNext = () => {
     const currentQ = questions[currentQuestion];
-    if (!answers[currentQ.id]) {
+    if (!answers[currentQ.question_id]) {
       toast({
         title: "Please select an answer",
         description: "You need to answer the current question to continue.",
@@ -41,7 +66,7 @@ const Assessment = () => {
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      setIsComplete(true);
+      submitAssessment();
     }
   };
 
@@ -51,17 +76,63 @@ const Assessment = () => {
     }
   };
 
-  const handleComplete = () => {
-    toast({
-      title: "Assessment Complete!",
-      description: "Generating your personalized learning path...",
-    });
-    
-    // Simulate processing delay
-    setTimeout(() => {
-      navigate('/dashboard');
-    }, 2000);
+  const submitAssessment = async () => {
+    try {
+      setIsSubmitting(true);
+      const userEmail = getUserEmail();
+      
+      // Convert question_id keys to strings for API
+      const formattedAnswers = {};
+      Object.entries(answers).forEach(([key, value]) => {
+        formattedAnswers[key.toString()] = value;
+      });
+
+      const result = await assessmentAPI.submitAssessment(formattedAnswers, userEmail);
+      
+      // Update user data
+      setUser({
+        email: userEmail,
+        name: userEmail.split('@')[0],
+        assessment_completed: true,
+        ...result.user_profile
+      });
+
+      toast({
+        title: "Assessment Complete!",
+        description: "Generating your personalized learning path...",
+      });
+
+      setIsComplete(true);
+      
+      // Navigate to dashboard after delay
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error submitting assessment:', error);
+      toast({
+        title: "Error submitting assessment",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-6">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading assessment questions...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isComplete) {
     return (
@@ -82,11 +153,22 @@ const Assessment = () => {
               <p className="text-sm text-slate-600">
                 Creating your dashboard with recommended tools and learning plans...
               </p>
-              <Button onClick={handleComplete} className="w-full">
-                View My Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 flex items-center justify-center">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="p-6">
+            <p>No questions available. Please try again later.</p>
+            <Button onClick={() => navigate('/')} className="mt-4">
+              Go Home
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -137,8 +219,8 @@ const Assessment = () => {
           <CardContent>
             {currentQ.type === 'single-choice' ? (
               <RadioGroup 
-                value={answers[currentQ.id] || ''} 
-                onValueChange={(value) => handleAnswer(currentQ.id, value)}
+                value={answers[currentQ.question_id] || ''} 
+                onValueChange={(value) => handleAnswer(currentQ.question_id, value)}
               >
                 {currentQ.options.map((option, index) => (
                   <div key={index} className="flex items-center space-x-2">
@@ -155,13 +237,13 @@ const Assessment = () => {
                   <div key={index} className="flex items-center space-x-2">
                     <Checkbox 
                       id={`checkbox-${index}`}
-                      checked={(answers[currentQ.id] || []).includes(option)}
+                      checked={(answers[currentQ.question_id] || []).includes(option)}
                       onCheckedChange={(checked) => {
-                        const currentAnswers = answers[currentQ.id] || [];
+                        const currentAnswers = answers[currentQ.question_id] || [];
                         if (checked) {
-                          handleAnswer(currentQ.id, [...currentAnswers, option]);
+                          handleAnswer(currentQ.question_id, [...currentAnswers, option]);
                         } else {
-                          handleAnswer(currentQ.id, currentAnswers.filter(a => a !== option));
+                          handleAnswer(currentQ.question_id, currentAnswers.filter(a => a !== option));
                         }
                       }}
                     />
@@ -186,9 +268,18 @@ const Assessment = () => {
             Previous
           </Button>
           
-          <Button onClick={handleNext}>
-            {currentQuestion === questions.length - 1 ? 'Complete Assessment' : 'Next'}
-            <ArrowRight className="ml-2 h-4 w-4" />
+          <Button onClick={handleNext} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                {currentQuestion === questions.length - 1 ? 'Complete Assessment' : 'Next'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
         </div>
       </div>

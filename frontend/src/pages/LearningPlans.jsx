@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -13,30 +13,49 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockLearningPlans } from '../data/mock';
+import { plansAPI } from '../services/api';
+import { useUser } from '../hooks/useUser';
+import { useToast } from '../hooks/use-toast';
 
 const LearningPlans = () => {
   const navigate = useNavigate();
+  const { getUserEmail } = useUser();
+  const { toast } = useToast();
+  const [plans, setPlans] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortBy, setSortBy] = useState('progress');
+  const [sortBy, setSortBy] = useState('title');
+  const [isLoading, setIsLoading] = useState(true);
   
-  const filteredPlans = mockLearningPlans
-    .filter(plan => 
-      plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      plan.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      plan.tools.some(tool => tool.toLowerCase().includes(searchTerm.toLowerCase()))
-    )
-    .sort((a, b) => {
-      switch(sortBy) {
-        case 'progress': return b.progress - a.progress;
-        case 'duration': return parseInt(a.duration) - parseInt(b.duration);
-        case 'title': return a.title.localeCompare(b.title);
-        default: return 0;
-      }
-    });
+  useEffect(() => {
+    loadPlans();
+  }, [searchTerm, sortBy]);
+
+  const loadPlans = async () => {
+    try {
+      setIsLoading(true);
+      const filters = {
+        search: searchTerm || undefined,
+        sort_by: sortBy,
+        user_email: getUserEmail()
+      };
+      
+      const data = await plansAPI.getPlans(filters);
+      setPlans(data.plans);
+    } catch (error) {
+      console.error('Error loading learning plans:', error);
+      toast({
+        title: "Error loading learning plans",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const PlanCard = ({ plan }) => (
     <Card className="hover:shadow-lg transition-shadow">
@@ -73,9 +92,9 @@ const LearningPlans = () => {
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-slate-600">Progress</span>
-              <span className="font-medium">{plan.progress}%</span>
+              <span className="font-medium">{plan.progress || 0}%</span>
             </div>
-            <Progress value={plan.progress} className="w-full" />
+            <Progress value={plan.progress || 0} className="w-full" />
           </div>
           
           <div className="space-y-2">
@@ -84,8 +103,8 @@ const LearningPlans = () => {
               <div key={index} className="flex items-center justify-between text-sm">
                 <span className="text-slate-600">Week {week.week}: {week.title}</span>
                 <div className="flex items-center">
-                  <span className="text-slate-500 mr-2">{week.completed}/{week.tasks.length}</span>
-                  {week.completed === week.tasks.length ? (
+                  <span className="text-slate-500 mr-2">{week.completed || 0}/{week.tasks.length}</span>
+                  {(week.completed || 0) === week.tasks.length ? (
                     <CheckCircle className="h-4 w-4 text-green-500" />
                   ) : (
                     <div className="w-4 h-4 border-2 border-slate-300 rounded-full" />
@@ -96,11 +115,11 @@ const LearningPlans = () => {
           </div>
           
           <Button 
-            onClick={() => navigate(`/plan/${plan.id}`)} 
+            onClick={() => navigate(`/plan/${plan._id}`)} 
             className="w-full"
-            variant={plan.progress > 0 ? "default" : "outline"}
+            variant={(plan.progress || 0) > 0 ? "default" : "outline"}
           >
-            {plan.progress > 0 ? 'Continue Learning' : 'Start Plan'}
+            {(plan.progress || 0) > 0 ? 'Continue Learning' : 'Start Plan'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -156,9 +175,9 @@ const LearningPlans = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="progress">Sort by Progress</SelectItem>
-                  <SelectItem value="duration">Sort by Duration</SelectItem>
                   <SelectItem value="title">Sort by Title</SelectItem>
+                  <SelectItem value="duration">Sort by Duration</SelectItem>
+                  <SelectItem value="progress">Sort by Progress</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -166,7 +185,7 @@ const LearningPlans = () => {
           
           <div className="mt-4 flex items-center justify-between">
             <span className="text-sm text-slate-600">
-              {filteredPlans.length} learning plans available
+              {isLoading ? 'Loading...' : `${plans.length} learning plans available`}
             </span>
             {searchTerm && (
               <Button 
@@ -201,15 +220,24 @@ const LearningPlans = () => {
           </Card>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        )}
+
         {/* Learning Plans Grid */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {filteredPlans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
-          ))}
-        </div>
+        {!isLoading && plans.length > 0 && (
+          <div className="grid md:grid-cols-2 gap-8">
+            {plans.map((plan) => (
+              <PlanCard key={plan._id} plan={plan} />
+            ))}
+          </div>
+        )}
 
         {/* No Results */}
-        {filteredPlans.length === 0 && (
+        {!isLoading && plans.length === 0 && (
           <div className="text-center py-12">
             <Target className="h-12 w-12 text-slate-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-900 mb-2">No learning plans found</h3>
