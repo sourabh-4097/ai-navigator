@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -12,17 +12,96 @@ import {
   ArrowRight,
   Award,
   BookOpen,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { mockUserProfile, mockTools, mockLearningPlans, mockProgress } from '../data/mock';
+import { useUser } from '../hooks/useUser';
+import { dashboardAPI } from '../services/api';
+import { useToast } from '../hooks/use-toast';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const user = mockUserProfile;
-  const recommendedTools = mockTools.slice(0, 3);
-  const activePlans = mockLearningPlans;
-  const progress = mockProgress;
+  const { user, getUserEmail } = useUser();
+  const { toast } = useToast();
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      const userEmail = getUserEmail();
+      const data = await dashboardAPI.getDashboard(userEmail);
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error loading dashboard:', error);
+      toast({
+        title: "Error loading dashboard",
+        description: "Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        {/* Header */}
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-8 w-8 text-slate-900" />
+              <span className="text-xl font-bold text-slate-900">AI Navigator</span>
+            </div>
+          </div>
+        </header>
+        
+        <div className="container mx-auto px-6 py-8 flex items-center justify-center">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p>Loading your dashboard...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (!dashboardData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
+        {/* Header */}
+        <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-8 w-8 text-slate-900" />
+              <span className="text-xl font-bold text-slate-900">AI Navigator</span>
+            </div>
+          </div>
+        </header>
+        
+        <div className="container mx-auto px-6 py-8 flex items-center justify-center">
+          <Card className="w-full max-w-md text-center">
+            <CardContent className="p-6">
+              <p>Unable to load dashboard. Please try again.</p>
+              <Button onClick={loadDashboardData} className="mt-4">
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const { user_profile, recommended_tools, active_plans, progress } = dashboardData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
@@ -41,7 +120,7 @@ const Dashboard = () => {
               Learning Plans
             </Button>
             <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-white font-semibold">
-              {user.name.charAt(0)}
+              {(user_profile.name || user_profile.email || 'U').charAt(0).toUpperCase()}
             </div>
           </div>
         </div>
@@ -51,7 +130,7 @@ const Dashboard = () => {
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            Welcome back, {user.name}!
+            Welcome back, {user_profile.name || user_profile.email?.split('@')[0] || 'there'}!
           </h1>
           <p className="text-slate-600">
             Ready to continue your AI learning journey? Here's what's waiting for you.
@@ -65,7 +144,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Tools Explored</p>
-                  <p className="text-2xl font-bold text-slate-900">{progress.toolsExplored}</p>
+                  <p className="text-2xl font-bold text-slate-900">{progress.tools_explored}</p>
                 </div>
                 <BookOpen className="h-8 w-8 text-blue-500" />
               </div>
@@ -77,7 +156,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Tools Mastered</p>
-                  <p className="text-2xl font-bold text-slate-900">{progress.toolsMastered}</p>
+                  <p className="text-2xl font-bold text-slate-900">{progress.tools_mastered}</p>
                 </div>
                 <Award className="h-8 w-8 text-green-500" />
               </div>
@@ -89,7 +168,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Active Plans</p>
-                  <p className="text-2xl font-bold text-slate-900">{progress.activePlans}</p>
+                  <p className="text-2xl font-bold text-slate-900">{progress.active_plans}</p>
                 </div>
                 <Target className="h-8 w-8 text-purple-500" />
               </div>
@@ -101,7 +180,7 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Learning Streak</p>
-                  <p className="text-2xl font-bold text-slate-900">{progress.weeklyStreak} days</p>
+                  <p className="text-2xl font-bold text-slate-900">{progress.weekly_streak} days</p>
                 </div>
                 <Zap className="h-8 w-8 text-orange-500" />
               </div>
@@ -125,8 +204,8 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recommendedTools.map((tool) => (
-                    <div key={tool.id} className="p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                  {recommended_tools.map((tool) => (
+                    <div key={tool._id} className="p-4 border rounded-lg hover:shadow-sm transition-shadow">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-slate-900">{tool.name}</h3>
                         <Badge variant="secondary">{tool.difficulty}</Badge>
@@ -136,7 +215,7 @@ const Dashboard = () => {
                         <div className="flex items-center space-x-4 text-sm text-slate-500">
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
-                            {tool.timeToLearn}
+                            {tool.time_to_learn}
                           </div>
                           <div className="flex items-center">
                             <Star className="h-4 w-4 mr-1 text-yellow-500" />
@@ -146,7 +225,7 @@ const Dashboard = () => {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => navigate(`/tool/${tool.id}`)}
+                          onClick={() => navigate(`/tool/${tool._id}`)}
                         >
                           Learn More
                         </Button>
@@ -176,8 +255,8 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  {activePlans.map((plan) => (
-                    <div key={plan.id} className="p-4 border rounded-lg">
+                  {active_plans.map((plan) => (
+                    <div key={plan._id || plan.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-semibold text-slate-900">{plan.title}</h3>
                         <Badge variant="outline">{plan.difficulty}</Badge>
@@ -187,9 +266,9 @@ const Dashboard = () => {
                       <div className="space-y-2 mb-4">
                         <div className="flex justify-between text-sm">
                           <span className="text-slate-600">Progress</span>
-                          <span className="font-medium">{plan.progress}%</span>
+                          <span className="font-medium">{plan.progress || 0}%</span>
                         </div>
-                        <Progress value={plan.progress} className="w-full" />
+                        <Progress value={plan.progress || 0} className="w-full" />
                       </div>
                       
                       <div className="flex items-center justify-between">
@@ -198,7 +277,7 @@ const Dashboard = () => {
                         </div>
                         <Button 
                           size="sm"
-                          onClick={() => navigate(`/plan/${plan.id}`)}
+                          onClick={() => navigate(`/plan/${plan._id || plan.id}`)}
                         >
                           Continue Learning
                         </Button>
@@ -249,7 +328,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3">
-                  {progress.achievementBadges.map((badge, index) => (
+                  {progress.achievement_badges.map((badge, index) => (
                     <div 
                       key={index}
                       className={`p-3 rounded-lg border text-center ${
@@ -276,17 +355,17 @@ const Dashboard = () => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-sm text-slate-600">Total Hours</span>
-                  <span className="font-medium">{progress.totalHoursLearned}h</span>
+                  <span className="font-medium">{progress.total_hours_learned}h</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-slate-600">Completion Rate</span>
                   <span className="font-medium">
-                    {Math.round((progress.toolsMastered / progress.toolsExplored) * 100)}%
+                    {progress.tools_explored > 0 ? Math.round((progress.tools_mastered / progress.tools_explored) * 100) : 0}%
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-slate-600">Current Streak</span>
-                  <span className="font-medium">{progress.weeklyStreak} days</span>
+                  <span className="font-medium">{progress.weekly_streak} days</span>
                 </div>
               </CardContent>
             </Card>
