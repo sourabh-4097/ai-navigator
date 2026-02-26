@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import List
 import uuid
 from datetime import datetime
+import uvicorn
 
 
 ROOT_DIR = Path(__file__).parent
@@ -42,9 +43,9 @@ async def root():
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
+    status_dict = input.model_dump()
     status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
+    _ = await db.status_checks.insert_one(status_obj.model_dump())
     return status_obj
 
 @api_router.get("/status", response_model=List[StatusCheck])
@@ -73,3 +74,6 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+if __name__ == "__main__":
+    uvicorn.run("server:app", host="0.0.0.0", port=12000, reload=True)

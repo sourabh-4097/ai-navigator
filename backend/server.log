@@ -1,0 +1,46 @@
+nohup: ignoring input
+INFO:     Will watch for changes in these directories: ['/workspace/ai-navigator/backend']
+INFO:     Uvicorn running on http://0.0.0.0:12000 (Press CTRL+C to quit)
+INFO:     Started reloader process [12716] using StatReload
+INFO:     Started server process [12720]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:45398 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45402 - "GET /docs HTTP/1.1" 200 OK
+INFO:     10.2.87.8:40758 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.96.12:53872 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.38.10:56396 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.20.131:34166 - "GET // HTTP/1.1" 404 Not Found
+INFO:     10.2.20.131:34182 - "GET // HTTP/1.1" 404 Not Found
+INFO:     10.2.20.131:34182 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     10.2.38.10:43642 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.87.8:49754 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.20.131:42650 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55756 - "GET /docs HTTP/1.1" 200 OK
+INFO:     10.2.38.10:57460 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.38.10:40392 - "GET /docs HTTP/1.1" 200 OK
+INFO:     10.2.38.10:40392 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     10.2.20.131:40312 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.96.12:45868 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.87.8:55126 - "GET / HTTP/1.1" 200 OK
+INFO:     10.2.96.12:37240 - "GET / HTTP/1.1" 200 OK
+(trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "/openhands/poetry/openhands-ai-5O4_aCHf-py3.12/lib/python3.12/site-packages/passlib/handlers/bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+INFO:     127.0.0.1:53980 - "POST /api/auth/login HTTP/1.1" 200 OK
+WARNING:  StatReload detected changes in 'app/core/config.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [12720]
+INFO:     Started server process [24102]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24102]
+INFO:     Stopping reloader process [12716]
